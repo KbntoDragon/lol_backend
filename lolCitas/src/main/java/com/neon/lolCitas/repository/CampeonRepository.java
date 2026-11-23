@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface CampeonRepository extends JpaRepository<Campeon, Long> {
 
-	List<Campeon> findByCategoriaId(Long categoriaId);
+	List<Campeon> findByRazaOrderByIdAsc(String raza);
 }

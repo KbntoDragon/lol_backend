@@ -1,18 +1,21 @@
 package com.neon.lolCitas.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Campeon que aparece en la app de citas.
+ * El JSON tiene la misma forma que usa el frontend (src/data/personajes.js):
+ * { id, nombre, raza, distancia_km, descripcion, instagram, imagen, posicion }
+ */
 @Entity
 @Table(name = "campeones")
 @Data
@@ -27,14 +30,20 @@ public class Campeon {
 	@Column(nullable = false)
 	private String nombre;
 
-	private String titulo;
+	/** Humanos, Vastayas, Del Vacío, Yordles... */
+	private String raza;
+
+	@JsonProperty("distancia_km")
+	private Integer distanciaKm;
 
 	@Column(length = 2000)
 	private String descripcion;
 
-	private String imagenUrl;
+	private String instagram;
 
-	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "categoria_id")
-	private Categoria categoria;
+	@Column(length = 1000)
+	private String imagen;
+
+	/** object-position CSS para encuadrar la foto, ej: "50% 20%" */
+	private String posicion;
 }
