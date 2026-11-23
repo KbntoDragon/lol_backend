@@ -2,11 +2,17 @@ package com.neon.lolCitas.config;
 
 import com.neon.lolCitas.model.Campeon;
 import com.neon.lolCitas.model.Producto;
+import com.neon.lolCitas.model.Rol;
+import com.neon.lolCitas.model.Usuario;
 import com.neon.lolCitas.repository.CampeonRepository;
 import com.neon.lolCitas.repository.ProductoRepository;
+import com.neon.lolCitas.repository.UsuarioRepository;
+import com.neon.lolCitas.service.UsuarioService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,6 +21,7 @@ import java.util.List;
  * Al arrancar, si las tablas estan vacias, carga los datos que antes estaban
  * fijos en el frontend (src/data/personajes.js y src/data/productos.js).
  * Si ya hay datos, no hace nada.
+ * Tambien crea la cuenta de administrador si ADMIN_PASSWORD esta configurada.
  */
 @Component
 public class DatosIniciales implements CommandLineRunner {
@@ -23,14 +30,27 @@ public class DatosIniciales implements CommandLineRunner {
 
 	private final CampeonRepository campeones;
 	private final ProductoRepository productos;
+	private final UsuarioRepository usuarios;
+	private final PasswordEncoder encoder;
+	private final String adminCorreo;
+	private final String adminPassword;
 
-	public DatosIniciales(CampeonRepository campeones, ProductoRepository productos) {
+	public DatosIniciales(CampeonRepository campeones, ProductoRepository productos,
+			UsuarioRepository usuarios, PasswordEncoder encoder,
+			@Value("${app.admin.correo}") String adminCorreo,
+			@Value("${app.admin.password}") String adminPassword) {
 		this.campeones = campeones;
 		this.productos = productos;
+		this.usuarios = usuarios;
+		this.encoder = encoder;
+		this.adminCorreo = UsuarioService.normalizarCorreo(adminCorreo);
+		this.adminPassword = adminPassword;
 	}
 
 	@Override
 	public void run(String... args) {
+		crearAdmin();
+
 		if (campeones.count() == 0) {
 			campeones.saveAll(List.of(
 				new Campeon(null, "Ahri", "Vastayas", 8, "Misteriosa y encantadora.", "@ahri.en.la.grieta", "https://i.ibb.co/b5Jkgkc8/Ahri.webp", "50% 20%"),
@@ -59,5 +79,26 @@ public class DatosIniciales implements CommandLineRunner {
 			));
 			log.info("Datos iniciales: productos cargados");
 		}
+	}
+
+	private void crearAdmin() {
+		if (adminPassword == null || adminPassword.isBlank()) {
+			log.info("ADMIN_PASSWORD no configurada: no se crea la cuenta de administrador");
+			return;
+		}
+		Usuario existente = usuarios.findByCorreo(adminCorreo).orElse(null);
+		if (existente != null) {
+			if (existente.getRol() != Rol.ADMIN) {
+				log.warn("{} ya existe como usuario normal; no se convierte en admin automaticamente", adminCorreo);
+			}
+			return;
+		}
+		Usuario admin = new Usuario();
+		admin.setNombre("Admin");
+		admin.setCorreo(adminCorreo);
+		admin.setPassword(encoder.encode(adminPassword));
+		admin.setRol(Rol.ADMIN);
+		usuarios.save(admin);
+		log.info("Cuenta de administrador creada: {}", adminCorreo);
 	}
 }
